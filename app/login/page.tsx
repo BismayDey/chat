@@ -15,20 +15,29 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
+  const [error, setError] = useState("");
   const router = useRouter();
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(""); // Clear any previous errors
     try {
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      await updateProfile(userCredential.user, { displayName: username });
+      await signInWithEmailAndPassword(auth, email, password);
       router.push("/chat");
-    } catch (error) {
-      console.error("Error signing in with email and password", error);
+    } catch (err: unknown) {
+      if (err instanceof Error && "code" in err) {
+        const errorCode = (err as { code: string }).code;
+        if (
+          errorCode === "auth/invalid-credential" ||
+          errorCode === "auth/user-not-found" ||
+          errorCode === "auth/wrong-password"
+        ) {
+          setError("Invalid email or password. Please try again.");
+        } else {
+          setError("An error occurred during sign in. Please try again.");
+        }
+      }
+      console.error("Error signing in with email and password", err);
     }
   };
 
@@ -52,6 +61,7 @@ export default function Login() {
           Login to Awesome Chat
         </h1>
         <form onSubmit={handleEmailLogin} className="space-y-4">
+          {error && <p className="text-red-500 text-sm">{error}</p>}
           <input
             type="text"
             placeholder="Username"

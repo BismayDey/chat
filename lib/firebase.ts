@@ -1,6 +1,12 @@
 import { initializeApp, getApps } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore, doc, setDoc } from "firebase/firestore";
+import { getAuth, User } from "firebase/auth";
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  addDoc,
+  collection,
+} from "firebase/firestore";
 import { getAnalytics } from "firebase/analytics";
 
 const firebaseConfig = {
@@ -20,17 +26,12 @@ const analytics = typeof window !== "undefined" ? getAnalytics(app) : null;
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Define the type for user and additional data
-interface User {
-  uid: string;
-  email?: string | null;
-  displayName?: string | null;
+interface AdditionalData {
+  [key: string]: unknown;
 }
 
-type AdditionalData = Record<string, unknown>;
-
 export const createUserDocument = async (
-  user: User,
+  user: User | null,
   additionalData?: AdditionalData
 ) => {
   if (!user) return;
@@ -41,8 +42,8 @@ export const createUserDocument = async (
     await setDoc(
       userRef,
       {
-        email: user.email,
-        displayName: user.displayName,
+        email: user.email || "",
+        displayName: user.displayName || "",
         ...additionalData,
       },
       { merge: true }
@@ -53,3 +54,16 @@ export const createUserDocument = async (
 };
 
 export { app, auth, db, analytics };
+
+export const addPrivateMessage = async (
+  senderId: string,
+  receiverId: string,
+  message: string
+) => {
+  const chatId = [senderId, receiverId].sort().join("_");
+  await addDoc(collection(db, `privateChats/${chatId}/messages`), {
+    senderId,
+    text: message,
+    timestamp: new Date(),
+  });
+};
